@@ -215,26 +215,26 @@ REST_FRAMEWORK = {
     ),
 }
 
-# -----------------------------------------------------------------------------
-# Email (SMTP) — usa variables de entorno
-# -----------------------------------------------------------------------------
-# Puerto: Lo lee como cadena y lo convierte a entero (int)
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587")) 
+# ---------------------------------------------------------------------
+# Email (SMTP) — configuración correcta para Render
+# ---------------------------------------------------------------------
 
-# SSL/TLS: Lo lee como cadena y lo convierte a booleano (bool)
-# Usamos un valor por defecto (False) en caso de que la variable no exista en .env
-# La forma más segura de leer booleanos desde cadenas es:
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-# Host y Credenciales (se leen como cadenas - str)
-EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_HOST = os.getenv("EMAIL_HOST")         # ej: smtp.gmail.com
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+
+# Render NO soporta SSL 465 → Debe ser SIEMPRE TLS por 587
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+EMAIL_USE_SSL = False  # 🔥 Importante: Desactivado SIEMPRE
+
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
-EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
-# -----------------------------------------------------------------------------
-# Producción (sugerencias, descomenta cuando pases a HTTPS/CDN)
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Timeout recomendado (5–10 segundos)
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "10"))
 # -----------------------------------------------------------------------------
 # SECURE_SSL_REDIRECT = True
 # SESSION_COOKIE_SECURE = True
