@@ -3,11 +3,17 @@ from __future__ import annotations
 
 import json
 import random
+import logging
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import get_user_model, authenticate, login, update_session_auth_hash
+from django.contrib.auth import (
+    get_user_model,
+    authenticate,
+    login,
+    update_session_auth_hash,
+)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.exceptions import ValidationError
@@ -26,14 +32,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from django.contrib.auth.password_validation import validate_password  # <--- AGREGAR ESTA LÍNEA
-
+from django.contrib.auth.password_validation import validate_password  # Validación fuerte
 
 from core.authz import role_required
 from core.models import Perfil
 from .forms import UsuarioCrearForm, UsuarioEditarForm
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 # -------------------------------------------------------------------
 # Configuración
@@ -66,6 +72,7 @@ def _paginar(request, queryset, default_per_page: int = 10):
     page_obj = paginator.get_page(page_number)
     return page_obj, per_page, paginator
 
+
 def _aplicar_busqueda(qs, q: str):
     """
     Filtro por username, email, nombre, apellido y RUT (en Perfil).
@@ -80,6 +87,7 @@ def _aplicar_busqueda(qs, q: str):
         | Q(perfil__rut__icontains=q)
     )
 
+
 def _aplicar_orden(qs, sort_key: str | None, direction: str | None):
     """
     Aplica ordenamiento seguro según SORT_MAP y dir asc/desc.
@@ -88,6 +96,7 @@ def _aplicar_orden(qs, sort_key: str | None, direction: str | None):
     if (direction or "").lower() == "desc":
         sort_field = f"-{sort_field}"
     return qs.order_by(sort_field)
+
 
 # -------------------------------------------------------------------
 # Vistas de Gestión de Usuarios (Web)
@@ -127,6 +136,7 @@ def lista_usuarios(request):
     }
     return render(request, "usuarios/lista.html", ctx)
 
+
 @login_required
 @role_required("usuarios", "create")
 @require_http_methods(["GET", "POST"])
@@ -139,11 +149,12 @@ def crear_usuario(request):
                 messages.success(request, 'Usuario creado exitosamente')
                 return redirect('lista_usuarios')
             except ValidationError as e:
-                form.add_error('email', e) 
+                form.add_error('email', e)
     else:
         form = UsuarioCrearForm()
 
     return render(request, 'usuarios/form.html', {'form': form})
+
 
 @login_required
 @role_required("usuarios", "edit")
@@ -162,6 +173,7 @@ def editar_usuario(request, pk: int):
 
     return render(request, "usuarios/form.html", {"form": form, "user_obj": user})
 
+
 @login_required
 @role_required("usuarios", "delete")
 @require_http_methods(["POST", "GET"])
@@ -171,6 +183,7 @@ def eliminar_usuario(request, pk: int):
     user.delete()
     messages.success(request, f"Usuario «{username}» eliminado.")
     return redirect("lista_usuarios")
+
 
 @login_required
 @role_required("usuarios", "edit")
@@ -203,6 +216,7 @@ def deshabilitar_usuario(request, pk):
         
     return redirect("lista_usuarios")
 
+
 @login_required
 @role_required("usuarios", "edit")
 @require_POST
@@ -216,10 +230,10 @@ def restaurar_usuario(request, pk):
         messages.success(request, f"Usuario “{usuario.username}” restaurado.")
     return redirect("lista_usuarios")
 
+
 # -------------------------------------------------------------------
 # APIs (Para App Móvil)
 # -------------------------------------------------------------------
-
 @api_view(['POST'])
 @csrf_exempt
 def login_api(request):
@@ -287,6 +301,7 @@ def login_api(request):
         }
     }, status=200)
 
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def cambiar_password_inicial(request):
@@ -314,14 +329,17 @@ def cambiar_password_inicial(request):
         
     return Response({"success": True, "message": success_message})
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def health(request):
     return Response({"status": "ok", "time": timezone.now().isoformat()})
 
+
 @csrf_exempt
 def ping(request):
     return JsonResponse({"ok": True, "detail": "pong"})
+
 
 @login_required
 def api_usuarios_by_role(request):
@@ -350,10 +368,10 @@ def api_usuarios_by_role(request):
     ]
     return JsonResponse({"results": data})
 
+
 # -------------------------------------------------------------------
 # Flujos de Seguridad Web (Passwords)
 # -------------------------------------------------------------------
-
 @login_required
 def cambiar_password_obligatorio(request):
     """
@@ -378,8 +396,8 @@ def cambiar_password_obligatorio(request):
     
     return render(request, 'usuarios/cambiar_password_obligatorio.html', {'form': form})
 
-# --- RECUPERACIÓN DE CONTRASEÑA CON CÓDIGO (WEB) ---
 
+# --- RECUPERACIÓN DE CONTRASEÑA CON CÓDIGO (WEB) ---
 def web_recuperar_paso1(request):
     """Paso 1: Solicitar correo y enviar código OTP"""
     if request.method == 'POST':
@@ -399,23 +417,33 @@ def web_recuperar_paso1(request):
                 perfil.recovery_code_expires = timezone.now() + timedelta(minutes=15)
                 perfil.save()
                 
-                # 3. Enviar Correo
+                # 3. Construir correo
                 html_message = render_to_string('registration/email_codigo_otp.html', {
                     'user': user,
                     'codigo': codigo
                 })
                 plain_message = strip_tags(html_message)
-                
-                send_mail(
-                    subject='Código de Recuperación - Junta de Vecinos',
-                    message=plain_message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    html_message=html_message,
-                    fail_silently=True
-                )
-                
-                # Guardamos el email en sesión
+
+                # 4. Intentar enviar correo
+                try:
+                    send_mail(
+                        subject='Código de Recuperación - Junta de Vecinos',
+                        message=plain_message,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[user.email],
+                        html_message=html_message,
+                        fail_silently=False,   # importante para ver errores reales
+                    )
+                except Exception as e:
+                    logger.error(f"[RECUPERAR CUENTA] Error enviando correo a {user.email}: {e}")
+                    messages.error(
+                        request,
+                        "Ocurrió un problema al enviar el correo de recuperación. "
+                        "Por favor, intenta nuevamente en unos minutos."
+                    )
+                    return render(request, 'registration/recuperar_paso1.html')
+
+                # 5. Si todo salió bien, guardamos el email en sesión y seguimos
                 request.session['recuperar_email'] = user.email
                 messages.success(request, f"Código enviado a {user.email}")
                 return redirect('web_recuperar_paso2')
@@ -425,6 +453,7 @@ def web_recuperar_paso1(request):
             messages.error(request, "No encontramos una cuenta con ese correo.")
 
     return render(request, 'registration/recuperar_paso1.html')
+
 
 def web_recuperar_paso2(request):
     """Paso 2: Ingresar código OTP y nueva contraseña (CON VALIDACIONES)"""
@@ -459,19 +488,15 @@ def web_recuperar_paso2(request):
             messages.error(request, "Las contraseñas no coinciden.")
             return render(request, 'registration/recuperar_paso2.html', {'email': email_session})
 
-        # 4. VALIDACIÓN DE SEGURIDAD DE DJANGO (Lo nuevo)
+        # 4. VALIDACIÓN DE SEGURIDAD DE DJANGO
         try:
-            # Esto chequea largo mínimo (14), similitud con usuario, password común, etc.
             validate_password(pass1, user=user)
         except ValidationError as e:
-            # Si falla, mostramos cada error que Django encontró
             for error in e.messages:
                 messages.error(request, error)
             return render(request, 'registration/recuperar_paso2.html', {'email': email_session})
 
         # --- SI LLEGA AQUÍ, TODO ESTÁ CORRECTO ---
-        
-        # Guardar contraseña
         user.set_password(pass1)
         user.save()
         
@@ -479,7 +504,7 @@ def web_recuperar_paso2(request):
         user.perfil.recovery_code = None
         user.perfil.recovery_code_expires = None
         
-        # Apagar cambio obligatorio (ya la cambió voluntariamente)
+        # Apagar cambio obligatorio
         user.perfil.debe_cambiar_password = False 
         user.perfil.save()
         
