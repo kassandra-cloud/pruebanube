@@ -185,7 +185,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Define el directorio donde collectstatic copiará los archivos.
 # Debe estar fuera de cualquier condicional, ya que collectstatic siempre lo requiere.
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # ✅ Solución: Definido aquí
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
 # --- Configuración de WhiteNoise (Producción) ---
 if not DEBUG:
@@ -219,7 +219,7 @@ REST_FRAMEWORK = {
 # Email (SMTP) — usa variables de entorno
 # -----------------------------------------------------------------------------
 # Puerto: Lo lee como cadena y lo convierte a entero (int)
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465")) 
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587")) 
 
 # SSL/TLS: Lo lee como cadena y lo convierte a booleano (bool)
 # Usamos un valor por defecto (False) en caso de que la variable no exista en .env
@@ -232,6 +232,7 @@ EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "5"))
 # -----------------------------------------------------------------------------
 # Producción (sugerencias, descomenta cuando pases a HTTPS/CDN)
 # -----------------------------------------------------------------------------
