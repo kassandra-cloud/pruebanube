@@ -321,3 +321,6 @@ AUTHENTICATION_BACKENDS = [
     'core.authentication.LoginConCorreo',  # Tu nuevo sistema
     'django.contrib.auth.backends.ModelBackend',   # El sistema clásico (respaldo)
 ]
+
+APPSCRIPT_WEBHOOK_URL = os.getenv("APPSCRIPT_WEBHOOK_URL")
+APPSCRIPT_WEBHOOK_SECRET = os.getenv("APPSCRIPT_WEBHOOK_SECRET")

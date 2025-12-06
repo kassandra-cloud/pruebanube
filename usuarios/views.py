@@ -17,7 +17,6 @@ from django.contrib.auth import (
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse
@@ -37,6 +36,7 @@ from django.contrib.auth.password_validation import validate_password  # Validac
 from core.authz import role_required
 from core.models import Perfil
 from .forms import UsuarioCrearForm, UsuarioEditarForm
+from .utils import enviar_correo_via_webhook
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -424,18 +424,16 @@ def web_recuperar_paso1(request):
                 })
                 plain_message = strip_tags(html_message)
 
-                # 4. Intentar enviar correo
-                try:
-                    send_mail(
-                        subject='Código de Recuperación - Junta de Vecinos',
-                        message=plain_message,
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[user.email],
-                        html_message=html_message,
-                        fail_silently=False,   # importante para ver errores reales
-                    )
-                except Exception as e:
-                    logger.error(f"[RECUPERAR CUENTA] Error enviando correo a {user.email}: {e}")
+                # 4. Enviar correo vía webhook (Apps Script + Gmail)
+                ok = enviar_correo_via_webhook(
+                    to_email=user.email,
+                    subject='Código de Recuperación - Junta de Vecinos',
+                    html_body=html_message,
+                    text_body=plain_message,
+                )
+
+                if not ok:
+                    logger.error(f"[RECUPERAR CUENTA] Webhook no pudo enviar correo a {user.email}")
                     messages.error(
                         request,
                         "Ocurrió un problema al enviar el correo de recuperación. "
