@@ -41,13 +41,7 @@ FIREBASE_CLIENT_EMAIL = os.getenv("FIREBASE_CLIENT_EMAIL")
 FIREBASE_PRIVATE_KEY = os.getenv("FIREBASE_PRIVATE_KEY")
 FIREBASE_PRIVATE_KEY_ID = os.getenv("FIREBASE_PRIVATE_KEY_ID", "")
 
-ALLOWED_HOSTS = [
-    # Desarrollo local / emuladores / dispositivos en tu Wi-Fi
-    "127.0.0.1",
-    "localhost",
-    "10.0.2.2",
-    "192.168.104.132",
-]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 # Si usas login vía sesión desde Android/web, conviene permitir CSRF
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
