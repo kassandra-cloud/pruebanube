@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "channels",
+    "storages",
 ]
 
 # -------------------------------------------------------------------
