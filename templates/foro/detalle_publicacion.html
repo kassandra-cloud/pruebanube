@@ -101,7 +101,8 @@
                                 <div class="d-flex align-items-center p-2 bg-light rounded border">
                                     <i class="fas fa-microphone text-danger me-2"></i>
                                     <audio controls class="w-100" style="height: 30px;">
-                                        <source src="{{ item.archivo.url }}" type="audio/mpeg">
+                                        <source src="{{ item.archivo.url }}" type="audio/webm">
+                                        Tu navegador no soporta audio HTML5.
                                     </audio>
                                 </div>
                             {% elif item.tipo_archivo == 'documento' %}
@@ -125,7 +126,6 @@
                         <div class="bg-light p-3 rounded text-dark border position-relative" 
                              style="display: inline-block; max-width: 90%; border-radius: 0px 15px 15px 15px !important;">
                             
-                            {# Mostrar a quién responde (si es que tiene padre) #}
                             {% if item.parent %}
                                 <small class="text-muted d-block mb-1">
                                     <i class="fas fa-level-up-alt fa-rotate-90 me-1"></i> Respondiendo a **{{ item.parent.autor.username }}**
@@ -135,17 +135,14 @@
                             {{ item.contenido|linebreaksbr }}
                         </div>
                         
-                        {# Botón y Formulario de Respuesta para Comentarios #}
                         <div class="d-flex justify-content-start align-items-center mt-1">
                             <button class="btn btn-sm btn-link text-decoration-none text-muted me-3" data-reply="{{ item.pk }}">
                                 <i class="fas fa-reply me-1"></i> Responder
                             </button>
                             
-                            {# INICIO: Formulario de Reacción funcional #}
                             <form method="post" action="{% url 'foro:reaccionar_comentario_web' pk=item.pk %}" style="display: inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-link text-decoration-none">
-                                    {# Lógica para cambiar el ícono y color si ya reaccionó #}
                                     {% if request.user in item.likes.all %}
                                         <i class="fas fa-thumbs-up me-1 text-primary"></i> 
                                     {% else %}
@@ -154,12 +151,8 @@
                                     <span class="text-muted">{{ item.likes.count }}</span>
                                 </button>
                             </form>
-                            {# FIN: Formulario de Reacción #}
-
-                            {# Agregar más acciones como editar/eliminar si corresponde #}
                         </div>
                         
-                        {# Formulario Oculto de Respuesta #}
                         <div id="reply-form-{{ item.pk }}" style="display: none;" class="mt-2" data-parent-id="{{ item.pk }}">
                             <form method="post" action="{% url 'foro:detalle_publicacion' pk=publicacion.pk %}" class="needs-validation">
                                 {% csrf_token %}
@@ -200,7 +193,6 @@
                             {% endif %}
                         </div>
                         
-                        {# Área de Adjuntos (Archivos/Imágenes) - Contiene el input file original #}
                         <div class="collapse" id="collapseAdjunto">
                             <div class="card card-body p-2 bg-white mb-2">
                                 <label class="small text-muted mb-1"><i class="fas fa-camera"></i> Adjuntar imagen o archivo:</label>
@@ -208,7 +200,6 @@
                             </div>
                         </div>
 
-                        {# ÁREA PARA GRABACIÓN DE AUDIO #}
                         <div class="collapse" id="collapseAudio">
                             <div class="card card-body p-2 bg-white mb-2" id="audio-recorder-ui">
                                 <div class="d-flex align-items-center">
@@ -229,7 +220,6 @@
                                 </div>
                             </div>
                         </div>
-                        {# FIN ÁREA DE AUDIO #}
                     </div>
 
                     <div class="col-md-2 col-sm-3 d-flex flex-column gap-2">
@@ -257,5 +247,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/foro_detalle.js' %}"></script>
+<script src="{% static 'js/foro_detalle.js' %}"></script>  
 {% endblock %}
