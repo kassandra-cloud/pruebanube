@@ -20,14 +20,14 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = os.getenv("SECRET_KEY", "debug-secret")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-# Hosts básicos desde .env + locales
+# Hosts básicos desde .env
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# Puedes sumar tus IPs locales si quieres probar desde el celu
+# IPs locales extra (para probar desde el celu/emulador)
 ALLOWED_HOSTS += [
     "10.0.2.2",
     "192.168.0.103",
@@ -86,8 +86,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     "core.middleware.ForcePasswordChangeMiddleware",
-    # Si tienes el middleware de rendimiento definido en core/middleware.py,
-    # descomenta la siguiente línea:
+    # Si tienes este middleware creado en core/middleware.py, descomenta:
     # "core.middleware.MonitorRendimientoMiddleware",
 ]
 
@@ -190,14 +189,15 @@ if USE_S3_MEDIA:
     AWS_S3_USE_SSL = True
     AWS_S3_VERIFY = True
 
-    # En desarrollo URLs públicas, en producción firmadas
-    AWS_QUERYSTRING_AUTH = not DEBUG
+    # 🔑 SIEMPRE URLs firmadas (local y nube) → evita AccessDenied
+    AWS_QUERYSTRING_AUTH = True
 
-    # Storage por defecto → todo lo subido (incluido archivo_audio) va al bucket
+    # Storage por defecto → todo lo subido (incluido archivo de audio) va al bucket
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-    # URL base donde quedarán tus archivos (audios, imágenes, etc.)
+    # MEDIA_URL (no afecta a las URLs firmadas, pero es útil)
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
+
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
