@@ -24,7 +24,6 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
-    # 👈 aquí estaba el typo
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # IPs locales extra (para pruebas en red local / emulador)
