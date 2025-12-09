@@ -182,28 +182,29 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================================================
-# MEDIA (Cellar / S3)  → audios, imágenes, etc.
+# MEDIA (Cellar / S3) → audios, imágenes, etc.
 # ==============================================================
 USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "True").lower() == "true"
 
 if USE_S3_MEDIA:
-    # Credenciales de tu Cellar
+    # Credenciales de tu Cellar (Clever Cloud)
     AWS_ACCESS_KEY_ID = os.getenv("CELLAR_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("CELLAR_SECRET_KEY")
     AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")  # ej: foro-audios-kass
     AWS_S3_REGION_NAME = "US"
     AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CELLAR_HOST')}"
 
-    # Archivos públicos de lectura (para que el navegador pueda reproducir audio)
-    AWS_DEFAULT_ACL = "public-read"
-    AWS_QUERYSTRING_AUTH = False  # URLs simples, sin firma ?X-Amz-...
+    # Bucket/objetos privados, acceso mediante URLs firmadas (?X-Amz-...)
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = True
 
     AWS_S3_USE_SSL = True
     AWS_S3_VERIFY = True
 
+    # Storage por defecto: todo lo que subas (incluidos audios del foro) va a Cellar
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-    # Prefijo base para MEDIA_URL (no afecta al ACL)
+    # Prefijo base para MEDIA_URL (no afecta a los permisos)
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 
 else:
