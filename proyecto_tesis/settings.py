@@ -24,15 +24,16 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
 if RENDER_EXTERNAL_HOSTNAME:
+    # 👈 aquí estaba el typo
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# IPs locales extra (para probar desde el celu/emulador)
+# IPs locales extra (para pruebas en red local / emulador)
 ALLOWED_HOSTS += [
     "10.0.2.2",
     "192.168.0.103",
 ]
 
-# Orígenes de confianza para CSRF (ajusta si usas HTTPS)
+# Orígenes de confianza para CSRF (ajusta si usas HTTPS / dominio público)
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
     "http://localhost",
@@ -68,7 +69,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "channels",
-    "storages",  # para Cellar / S3
+    "storages",  # Cellar / S3
 ]
 
 # ==============================================================
@@ -86,7 +87,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     "core.middleware.ForcePasswordChangeMiddleware",
-    # Si tienes este middleware creado, puedes activarlo:
     # "core.middleware.MonitorRendimientoMiddleware",
 ]
 
@@ -183,30 +183,33 @@ if not DEBUG:
 
 # ==============================================================
 # MEDIA (Cellar / S3) → audios, imágenes, etc.
+#  MODO BUCKET PÚBLICO (public-read)
 # ==============================================================
 USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "True").lower() == "true"
 
 if USE_S3_MEDIA:
-    # Credenciales de tu Cellar (Clever Cloud)
     AWS_ACCESS_KEY_ID = os.getenv("CELLAR_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("CELLAR_SECRET_KEY")
     AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")  # ej: foro-audios-kass
     AWS_S3_REGION_NAME = "US"
     AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CELLAR_HOST')}"
 
-    # Bucket/objetos privados, acceso mediante URLs firmadas (?X-Amz-...)
-    AWS_DEFAULT_ACL = None
-    AWS_QUERYSTRING_AUTH = True
+    # Objetos públicos de lectura, sin URLs firmadas
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
+
+    # Fuerza ACL en cada archivo subido
+    AWS_S3_OBJECT_PARAMETERS = {
+        "ACL": "public-read",
+        "CacheControl": "max-age=86400",
+    }
 
     AWS_S3_USE_SSL = True
     AWS_S3_VERIFY = True
 
-    # Storage por defecto: todo lo que subas (incluidos audios del foro) va a Cellar
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-    # Prefijo base para MEDIA_URL (no afecta a los permisos)
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
-
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
@@ -250,7 +253,6 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 # ==============================================================
 # REDIS / CELERY
 # ==============================================================
-# Clever Cloud normalmente expone REDIS_URL
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
 CELERY_BROKER_URL = REDIS_URL
