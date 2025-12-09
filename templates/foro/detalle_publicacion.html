@@ -100,7 +100,7 @@
                                 <div class="d-flex align-items-center p-2 bg-light rounded border">
                                     <i class="fas fa-microphone text-danger me-2"></i>
                                     <audio controls preload="metadata" class="w-100" style="height: 30px;">
-                                        <source src="{{ item.archivo.url }}">
+                                        <source src="{{ item.archivo.url }}" type="audio/webm">
                                         Tu navegador no soporta audio HTML5.
                                     </audio>
                                 </div>
@@ -153,7 +153,7 @@
                             </form>
                         </div>
                         
-                        <div id="reply-form-{{ item.pk }}" style="display: none;" class="mt-2" data-parent-id="{{ item.pk }}%">
+                        <div id="reply-form-{{ item.pk }}" style="display: none;" class="mt-2" data-parent-id="{{ item.pk }}">
                             <form method="post" action="{% url 'foro:detalle_publicacion' pk=publicacion.pk %}" class="needs-validation">
                                 {% csrf_token %}
                                 <input type="hidden" name="parent_id" value="{{ item.pk }}">
