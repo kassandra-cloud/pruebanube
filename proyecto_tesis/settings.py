@@ -13,14 +13,13 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-
 # ==============================================================
 # SEGURIDAD
 # ==============================================================
 SECRET_KEY = os.getenv("SECRET_KEY", "debug-secret")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-# Hosts básicos desde .env
+# Hosts básicos desde .env (separados por coma)
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 RENDER_EXTERNAL_HOSTNAME = os.getenv("RENDER_EXTERNAL_HOSTNAME")
@@ -33,6 +32,7 @@ ALLOWED_HOSTS += [
     "192.168.0.103",
 ]
 
+# Orígenes de confianza para CSRF (ajusta si usas HTTPS)
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
     "http://localhost",
@@ -68,7 +68,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "channels",
-    "storages",  # para Cellar/S3
+    "storages",  # para Cellar / S3
 ]
 
 # ==============================================================
@@ -86,7 +86,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     "core.middleware.ForcePasswordChangeMiddleware",
-    # Si tienes este middleware creado en core/middleware.py, descomenta:
+    # Si tienes este middleware creado, puedes activarlo:
     # "core.middleware.MonitorRendimientoMiddleware",
 ]
 
@@ -139,10 +139,19 @@ DATABASES = {
 # AUTH / PASSWORD / LOGIN
 # ==============================================================
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 14}},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 14},
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
 
 LOGIN_URL = "/accounts/login/"
@@ -178,24 +187,23 @@ if not DEBUG:
 USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "True").lower() == "true"
 
 if USE_S3_MEDIA:
-    # Variables de Cellar desde el .env
+    # Credenciales de tu Cellar
     AWS_ACCESS_KEY_ID = os.getenv("CELLAR_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("CELLAR_SECRET_KEY")
-    AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")  # ej: foro-audios-kass
     AWS_S3_REGION_NAME = "US"
     AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CELLAR_HOST')}"
 
-    AWS_DEFAULT_ACL = None
+    # Archivos públicos de lectura (para que el navegador pueda reproducir audio)
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False  # URLs simples, sin firma ?X-Amz-...
+
     AWS_S3_USE_SSL = True
     AWS_S3_VERIFY = True
 
-    # 🔑 SIEMPRE URLs firmadas (local y nube) → evita AccessDenied
-    AWS_QUERYSTRING_AUTH = True
-
-    # Storage por defecto → todo lo subido (incluido archivo de audio) va al bucket
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-    # MEDIA_URL (no afecta a las URLs firmadas, pero es útil)
+    # Prefijo base para MEDIA_URL (no afecta al ACL)
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 
 else:
@@ -207,7 +215,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 
 # ==============================================================
-# FIREBASE (para Admin SDK)
+# FIREBASE (Admin SDK)
 # ==============================================================
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_CLIENT_EMAIL = os.getenv("FIREBASE_CLIENT_EMAIL")
@@ -241,6 +249,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 # ==============================================================
 # REDIS / CELERY
 # ==============================================================
+# Clever Cloud normalmente expone REDIS_URL
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
 
 CELERY_BROKER_URL = REDIS_URL
