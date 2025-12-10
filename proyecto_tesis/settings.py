@@ -32,14 +32,12 @@ ALLOWED_HOSTS += [
     "192.168.0.103",
 ]
 
-# Orígenes de confianza para CSRF
-# ⚠️ IMPORTANTE: agrega aquí tu dominio HTTPS de Render en producción.
+# Orígenes de confianza para CSRF (ajusta si usas HTTPS / dominio público)
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
     "http://localhost",
     "http://10.0.2.2",
     "http://192.168.0.103:8000",
-    # Ejemplo: "https://tu-app.onrender.com",
 ]
 
 # ==============================================================
@@ -69,9 +67,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "django_filters",
-    # "channels",  # Deshabilitado para Free Tier de Render
-    "storages",
-    "cloudinary_storage",  # Para almacenamiento persistente (opcional)
+    "channels",
+    "storages",  # Cellar / S3
 ]
 
 # ==============================================================
@@ -113,8 +110,7 @@ TEMPLATES = [
     },
 ]
 
-# ASGI_APPLICATION deshabilitado (Channels usa Redis, servicio pagado)
-# ASGI_APPLICATION = "proyecto_tesis.asgi.application"
+ASGI_APPLICATION = "proyecto_tesis.asgi.application"
 WSGI_APPLICATION = "proyecto_tesis.wsgi.application"
 
 # ==============================================================
@@ -185,32 +181,35 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================================================
-# MEDIA (Cloudinary opcional + fallback local)
+# MEDIA (Cellar / S3) → audios, imágenes, etc.
+#  MODO BUCKET PÚBLICO (public-read)
 # ==============================================================
+USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "True").lower() == "true"
 
-# Variables de entorno para Cloudinary
-CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
-CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
-CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
+if USE_S3_MEDIA:
+    AWS_ACCESS_KEY_ID = os.getenv("CELLAR_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.getenv("CELLAR_SECRET_KEY")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")  # ej: foro-audios-kass
+    AWS_S3_REGION_NAME = "US"
+    AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CELLAR_HOST')}"
 
-USE_CLOUD_MEDIA = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
+    # Objetos públicos de lectura, sin URLs firmadas
+    AWS_DEFAULT_ACL = "public-read"
+    AWS_QUERYSTRING_AUTH = False
 
-if USE_CLOUD_MEDIA:
-    # URL de conexión para django-cloudinary-storage
-    CLOUDINARY_URL = (
-        f"cloudinary://{CLOUDINARY_API_KEY}:{CLOUDINARY_API_SECRET}@{CLOUDINARY_CLOUD_NAME}"
-    )
+    # Fuerza ACL en cada archivo subido
+    AWS_S3_OBJECT_PARAMETERS = {
+        "ACL": "public-read",
+        "CacheControl": "max-age=86400",
+    }
 
-    # Backend de almacenamiento de media en Cloudinary
-    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    AWS_S3_USE_SSL = True
+    AWS_S3_VERIFY = True
 
-    # MEDIA_URL lo maneja cloudinary_storage (puedes dejarlo así o no definirlo)
-    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/"
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-    # MEDIA_ROOT no se usa con Cloudinary, pero debe existir como variable
-    MEDIA_ROOT = None
+    MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 else:
-    # Fallback a almacenamiento local (en Render es efímero, pero sirve para tesis)
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
 
@@ -251,35 +250,32 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # ==============================================================
-# REDIS / CELERY (DESHABILITADO PARA PLAN GRATUITO DE RENDER)
+# REDIS / CELERY
 # ==============================================================
-# REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
-#
-# CELERY_BROKER_URL = REDIS_URL
-# CELERY_RESULT_BACKEND = REDIS_URL
-# CELERY_ACCEPT_CONTENT = ["json"]
-# CELERY_TASK_SERIALIZER = "json"
-# CELERY_RESULT_SERIALIZER = "json"
-# CELERY_TIMEZONE = TIME_ZONE
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
 
 # ==============================================================
-# CHANNELS (DESHABILITADO PARA PLAN GRATUITO DE RENDER)
+# CHANNELS
 # ==============================================================
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
-#         "CONFIG": {
-#             "hosts": [REDIS_URL],
-#         },
-#     }
-# }
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [REDIS_URL],
+        },
+    }
+}
 
 # ==============================================================
 # MODELO VOSK
 # ==============================================================
-# ATENCIÓN: la lógica que usa Vosk debe ejecutarse síncronamente
-# en el proceso web (si es rápida) o deshabilitarse, ya que Celery
-# está deshabilitado en este despliegue.
 MODEL_PATH_RELATIVO = Path("vosk-model-small-es-0.42")
 MODEL_PATH = BASE_DIR / MODEL_PATH_RELATIVO
 
