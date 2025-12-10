@@ -15,7 +15,7 @@ __pycache__/
 *.pyc
 
 # Archivos de media (que deben estar en S3 o database no en Git)
-media/
+
 
 # Archivos estáticos recolectados (se generan en el servidor)
 static_root/
