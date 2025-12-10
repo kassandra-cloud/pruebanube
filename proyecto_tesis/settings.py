@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # ==============================================================
 # PATHS & ENV
 # ==============================================================
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # ==============================================================
@@ -281,3 +281,4 @@ MODEL_PATH = BASE_DIR / MODEL_PATH_RELATIVO
 # VARIOS
 # ==============================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
