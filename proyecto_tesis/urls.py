@@ -37,4 +37,5 @@ urlpatterns = [
 
 # esto es para que los archivos subidos (MEDIA) funcionen
 # Solo para servir media desde Django (dev / proyectos pequeños)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.MEDIA_ROOT:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

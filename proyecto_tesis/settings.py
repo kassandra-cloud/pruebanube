@@ -38,6 +38,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
     "http://10.0.2.2",
     "http://192.168.0.103:8000",
+    # ej: "https://pruebanube-xcmk.onrender.com",
 ]
 
 # ==============================================================
@@ -68,7 +69,7 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "channels",
-    "storages",  # Cellar / S3
+    "storages",  # (queda instalado por si a futuro vuelves a S3)
 ]
 
 # ==============================================================
@@ -119,7 +120,7 @@ WSGI_APPLICATION = "proyecto_tesis.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.getenv("MYSQL_DATABASE", "prueba"),
+        "NAME": os.getenv("MYSQL_DATABASE"), 
         "USER": os.getenv("MYSQL_USER", "root"),
         "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
         "HOST": os.getenv("MYSQL_HOST", "127.0.0.1"),
@@ -181,23 +182,21 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================================================
-# MEDIA (Cellar / S3) → audios, imágenes, etc.
-#  MODO BUCKET PÚBLICO (public-read)
+# MEDIA → almacenamiento local en Render
 # ==============================================================
-USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "True").lower() == "true"
+# Dejamos S3/Cellar desactivado. Si algún día quieres volver,
+# puedes setear USE_S3_MEDIA=True en el entorno.
+USE_S3_MEDIA = os.getenv("USE_S3_MEDIA", "False").lower() == "true"
 
 if USE_S3_MEDIA:
     AWS_ACCESS_KEY_ID = os.getenv("CELLAR_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("CELLAR_SECRET_KEY")
-    AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")  # ej: foro-audios-kass
+    AWS_STORAGE_BUCKET_NAME = os.getenv("CELLAR_BUCKET_NAME")
     AWS_S3_REGION_NAME = "US"
     AWS_S3_ENDPOINT_URL = f"https://{os.getenv('CELLAR_HOST')}"
 
-    # Objetos públicos de lectura, sin URLs firmadas
     AWS_DEFAULT_ACL = "public-read"
     AWS_QUERYSTRING_AUTH = False
-
-    # Fuerza ACL en cada archivo subido
     AWS_S3_OBJECT_PARAMETERS = {
         "ACL": "public-read",
         "CacheControl": "max-age=86400",
@@ -207,7 +206,6 @@ if USE_S3_MEDIA:
     AWS_S3_VERIFY = True
 
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/"
 else:
     MEDIA_URL = "/media/"
