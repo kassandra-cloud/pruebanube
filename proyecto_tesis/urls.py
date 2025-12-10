@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings 
 from django.conf.urls.static import static 
 from anuncios.api import lista_anuncios_api
+from django.views.static import serve 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("core.urls")),  
@@ -38,4 +39,11 @@ urlpatterns = [
 # esto es para que los archivos subidos (MEDIA) funcionen
 # Solo para servir media desde Django (dev / proyectos pequeños)
 if settings.MEDIA_ROOT:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [
+        path(
+            "media/<path:path>",
+            serve,
+            {"document_root": settings.MEDIA_ROOT},
+            name="media",
+        ),
+    ]
