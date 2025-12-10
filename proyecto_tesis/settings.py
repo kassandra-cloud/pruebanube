@@ -32,14 +32,14 @@ ALLOWED_HOSTS += [
     "192.168.0.103",
 ]
 
-# Orígenes de confianza para CSRF (ajusta si usas HTTPS / dominio público)
-# Se recomienda usar HTTPS para Render en producción.
+# Orígenes de confianza para CSRF
+# ⚠️ IMPORTANTE: agrega aquí tu dominio HTTPS de Render en producción.
 CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1",
     "http://localhost",
     "http://10.0.2.2",
     "http://192.168.0.103:8000",
-    # Agregue su dominio de Render si usa HTTPS: 'https://su-app.onrender.com'
+    # Ejemplo: "https://tu-app.onrender.com",
 ]
 
 # ==============================================================
@@ -69,9 +69,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "django_filters",
-    # 'channels', # Deshabilitado para Free Tier de Render
-    "storages", 
-    'cloudinary_storage', # CLAVE: Para el almacenamiento persistente gratuito
+    # "channels",  # Deshabilitado para Free Tier de Render
+    "storages",
+    "cloudinary_storage",  # Para almacenamiento persistente (opcional)
 ]
 
 # ==============================================================
@@ -113,8 +113,8 @@ TEMPLATES = [
     },
 ]
 
-# ASGI_APPLICATION ya no se usa, ya que Channels usa Redis (servicio pagado)
-# ASGI_APPLICATION = "proyecto_tesis.asgi.application" 
+# ASGI_APPLICATION deshabilitado (Channels usa Redis, servicio pagado)
+# ASGI_APPLICATION = "proyecto_tesis.asgi.application"
 WSGI_APPLICATION = "proyecto_tesis.wsgi.application"
 
 # ==============================================================
@@ -185,44 +185,34 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================================================
-# MEDIA (CLOUD STORAGE GRATUITO) - SOLUCIÓN FINAL
-# --------------------------------------------------------------
-# Usa Cloudinary si las claves están presentes, o almacenamiento local.
+# MEDIA (Cloudinary opcional + fallback local)
 # ==============================================================
 
-# 1. Obtener variables de entorno para Cloudinary
-CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
-CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
-CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+# Variables de entorno para Cloudinary
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
 
-# Verificamos si al menos el CLOUD_NAME existe.
-USE_CLOUD_MEDIA = CLOUDINARY_CLOUD_NAME is not None and CLOUDINARY_CLOUD_NAME != ""
+USE_CLOUD_MEDIA = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
 
 if USE_CLOUD_MEDIA:
-    # --- USAR CLOUDINARY ---
-    
-    # URL de conexión, esencial para django-cloudinary-storage
+    # URL de conexión para django-cloudinary-storage
     CLOUDINARY_URL = (
         f"cloudinary://{CLOUDINARY_API_KEY}:{CLOUDINARY_API_SECRET}@{CLOUDINARY_CLOUD_NAME}"
     )
 
-    # Forzamos el backend de almacenamiento
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    
-    # 🛑 CRÍTICO: Forzar la URL completa de Cloudinary para que el navegador la use.
-    # Esto resuelve el 404 al evitar que Django use la URL local de Render.
-    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/media/" 
-    
-    MEDIA_ROOT = None 
-    
-    print("DEBUG: CONFIGURACIÓN EXITOSA: Usando Cloudinary persistente.")
-    
+    # Backend de almacenamiento de media en Cloudinary
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+    # MEDIA_URL lo maneja cloudinary_storage (puedes dejarlo así o no definirlo)
+    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/"
+
+    # MEDIA_ROOT no se usa con Cloudinary, pero debe existir como variable
+    MEDIA_ROOT = None
 else:
-    # Fallback a local (Causará 404 en Render Free Tier)
+    # Fallback a almacenamiento local (en Render es efímero, pero sirve para tesis)
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
-    print("DEBUG: ERROR DE CONFIGURACIÓN: Usando almacenamiento LOCAL.")
-
 
 # Límite de subida (50 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
@@ -264,7 +254,7 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 # REDIS / CELERY (DESHABILITADO PARA PLAN GRATUITO DE RENDER)
 # ==============================================================
 # REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/1")
-
+#
 # CELERY_BROKER_URL = REDIS_URL
 # CELERY_RESULT_BACKEND = REDIS_URL
 # CELERY_ACCEPT_CONTENT = ["json"]
@@ -286,11 +276,10 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # ==============================================================
 # MODELO VOSK
-# --------------------------------------------------------------
-# ATENCIÓN: La lógica que usa Vosk debe ejecutarse SÍNCRONAMENTE en el proceso 
-# web único (si es muy rápida) o deshabilitarse por completo, ya que Celery
-# está deshabilitado.
 # ==============================================================
+# ATENCIÓN: la lógica que usa Vosk debe ejecutarse síncronamente
+# en el proceso web (si es rápida) o deshabilitarse, ya que Celery
+# está deshabilitado en este despliegue.
 MODEL_PATH_RELATIVO = Path("vosk-model-small-es-0.42")
 MODEL_PATH = BASE_DIR / MODEL_PATH_RELATIVO
 
