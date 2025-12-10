@@ -71,7 +71,7 @@ INSTALLED_APPS = [
     "django_filters",
     # 'channels', # Deshabilitado para Free Tier de Render
     "storages", 
-    'cloudinary_storage', # Usado para el almacenamiento gratuito de media files
+    'cloudinary_storage', # CLAVE: Para el almacenamiento persistente gratuito
 ]
 
 # ==============================================================
@@ -113,13 +113,13 @@ TEMPLATES = [
     },
 ]
 
-# ASGI_APPLICATION = "proyecto_tesis.asgi.application" # Deshabilitado, ya que Channels usa Redis
+# ASGI_APPLICATION ya no se usa, ya que Channels usa Redis (servicio pagado)
+# ASGI_APPLICATION = "proyecto_tesis.asgi.application" 
 WSGI_APPLICATION = "proyecto_tesis.wsgi.application"
 
 # ==============================================================
 # BASE DE DATOS (MySQL)
 # ==============================================================
-# ... (Bloque de base de datos sin cambios)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -141,7 +141,6 @@ DATABASES = {
 # ==============================================================
 # AUTH / PASSWORD / LOGIN
 # ==============================================================
-# ... (Bloque de autenticación sin cambios)
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
@@ -186,10 +185,9 @@ if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ==============================================================
-# MEDIA (CLOUD STORAGE GRATUITO)
+# MEDIA (CLOUD STORAGE GRATUITO) - SOLUCIÓN FINAL
 # --------------------------------------------------------------
-# Se usa Cloudinary para almacenamiento persistente de media files (audios, imágenes).
-# Las variables CLOUDINARY_* deben estar en el entorno de Render.
+# Usa Cloudinary si las claves están presentes, o almacenamiento local.
 # ==============================================================
 
 # 1. Obtener variables de entorno para Cloudinary
@@ -197,12 +195,34 @@ CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
 CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
-# 2. Configurar el almacenamiento predeterminado para archivos de medios
-# Esto anula la lógica anterior de S3/Cellar y usa Cloudinary
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Verificamos si al menos el CLOUD_NAME existe.
+USE_CLOUD_MEDIA = CLOUDINARY_CLOUD_NAME is not None and CLOUDINARY_CLOUD_NAME != ""
 
-# 3. Definir la URL base
-MEDIA_URL = '/media/'
+if USE_CLOUD_MEDIA:
+    # --- USAR CLOUDINARY ---
+    
+    # URL de conexión, esencial para django-cloudinary-storage
+    CLOUDINARY_URL = (
+        f"cloudinary://{CLOUDINARY_API_KEY}:{CLOUDINARY_API_SECRET}@{CLOUDINARY_CLOUD_NAME}"
+    )
+
+    # Forzamos el backend de almacenamiento
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    
+    # 🛑 CRÍTICO: Forzar la URL completa de Cloudinary para que el navegador la use.
+    # Esto resuelve el 404 al evitar que Django use la URL local de Render.
+    MEDIA_URL = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/media/" 
+    
+    MEDIA_ROOT = None 
+    
+    print("DEBUG: CONFIGURACIÓN EXITOSA: Usando Cloudinary persistente.")
+    
+else:
+    # Fallback a local (Causará 404 en Render Free Tier)
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+    print("DEBUG: ERROR DE CONFIGURACIÓN: Usando almacenamiento LOCAL.")
+
 
 # Límite de subida (50 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
@@ -211,7 +231,6 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 # ==============================================================
 # FIREBASE (Admin SDK)
 # ==============================================================
-# ... (Bloque de Firebase sin cambios)
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID")
 FIREBASE_CLIENT_EMAIL = os.getenv("FIREBASE_CLIENT_EMAIL")
 FIREBASE_PRIVATE_KEY = os.getenv("FIREBASE_PRIVATE_KEY")
@@ -220,7 +239,6 @@ FIREBASE_PRIVATE_KEY_ID = os.getenv("FIREBASE_PRIVATE_KEY_ID", "")
 # ==============================================================
 # DRF
 # ==============================================================
-# ... (Bloque de DRF sin cambios)
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework.authentication.TokenAuthentication",
@@ -234,7 +252,6 @@ REST_FRAMEWORK = {
 # ==============================================================
 # EMAIL (SMTP)
 # ==============================================================
-# ... (Bloque de Email sin cambios)
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
